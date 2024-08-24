@@ -66,6 +66,11 @@ func (e *Explorer) Ls(_ hr, p *Location, r *LsR) error {
 	if err != nil {
 		return err
 	}
+	r.Files = append(r.Files, File{
+		Name: "..",
+		Path: filepath.Clean(path.Join(location, "..")),
+		Type: "d",
+	})
 	for _, e := range entries {
 		f, err := NewFile(e, location)
 		if err != nil {

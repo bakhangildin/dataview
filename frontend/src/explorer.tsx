@@ -2,6 +2,7 @@ import { Component, For, onMount } from "solid-js";
 import { Client, File } from "./rpc";
 import { createStore, produce, SetStoreFunction } from "solid-js/store";
 import { VsFile, VsFolder } from "solid-icons/vs";
+import { DateTime } from "luxon";
 
 type ExplorerFileData = File & {
 	Selected: boolean;
@@ -24,18 +25,27 @@ export const Explorer: Component<{ cl: Client }> = (props) => {
 	});
 
 	onMount(async () => {
-		const res = await cl.ls(".");
-		if (res.kind !== "success") return;
+		let loc = localStorage.getItem("location")
+		if (!loc) {
+			loc = "."
+		}
+		let res = await cl.ls(loc);
+		if (res.kind !== "success") {
+			res = await cl.ls(".");
+			if (res.kind !== "success") {
+				return;
+			}
+		}
 
 		setState(
 			produce((s) => {
 				s.Location = res.data.Location;
+				localStorage.setItem("location", res.data.Location)
 				s.Loading = false;
 				s.Files.length = 0;
-				s.Files = new Array<ExplorerFileData>(res.data.Files.length + 1);
-				s.Files[0] = parentDir;
+				s.Files = new Array<ExplorerFileData>(res.data.Files.length);
 				for (let i = 0; i < res.data.Files.length; i++) {
-					s.Files[i + 1] = {
+					s.Files[i] = {
 						...res.data.Files[i],
 						Selected: false,
 						ClickTimestamp: 0,
@@ -46,7 +56,7 @@ export const Explorer: Component<{ cl: Client }> = (props) => {
 	});
 
 	return (
-		<div class="px-4 py-2">
+		<div class="px-4 py-2 rounded border border-base-content/30 w-fit">
 			<div class="flex items-center gap-2">
 				<div class="flex items-center gap-2 text-lg">
 					<div>File Explorer</div>
@@ -57,7 +67,7 @@ export const Explorer: Component<{ cl: Client }> = (props) => {
 				</div>
 			</div>
 			<div>Location {state.Location}</div>
-			<div class="flex w-min flex-col gap-0.5">
+			<div class="flex flex-col">
 				<For each={state.Files}>
 					{(file, index) => (
 						<EFileItem
@@ -90,18 +100,19 @@ const EFileItem: Component<{
 			const res = await cl.ls(f.Path);
 			if (res.kind !== "success") {
 				setState("Loading", false);
+				console.error("ls", f.Path, res.data)
 				return;
 			}
 
 			setState(
 				produce((s) => {
+					localStorage.setItem("location", res.data.Location)
 					s.Location = res.data.Location;
 					s.Loading = false;
 					s.Files.length = 0;
-					s.Files = new Array<ExplorerFileData>(res.data.Files.length + 1);
-					s.Files[0] = parentDir;
+					s.Files = new Array<ExplorerFileData>(res.data.Files.length);
 					for (let i = 0; i < res.data.Files.length; i++) {
-						s.Files[i + 1] = {
+						s.Files[i] = {
 							...res.data.Files[i],
 							Selected: false,
 							ClickTimestamp: 0,
@@ -109,36 +120,47 @@ const EFileItem: Component<{
 					}
 				}),
 			);
+		} else {
+			setState(
+				produce((s) => {
+					s.Files[index].Selected = !f.Selected;
+					s.Files[index].ClickTimestamp = Date.now();
+				}),
+			);
 		}
-
-		setState(
-			produce((s) => {
-				s.Files[index].Selected = !f.Selected;
-				s.Files[index].ClickTimestamp = Date.now();
-			}),
-		);
 	}
 
 	return (
 		<div
-			class="flex cursor-pointer select-none items-center gap-1 rounded border border-base-content/30 px-2.5 py-0.5"
+			class="flex cursor-pointer select-none items-center px-0.5 divide-x divide-base-content/30"
 			onClick={onClick}
 			classList={{
-				["border-info-content"]: f.Selected,
+				["bg-info-content/20"]: f.Selected,
 			}}
 		>
-			{f.Type === "f" ? <VsFile /> : <VsFolder />}
-			{f.Name}
+			<div class="px-1.5 text-left">
+				{f.Type === "f" ? <VsFile /> : <VsFolder />}
+			</div>
+			<div class="px-1.5 mr-auto truncate min-w-80">
+				{f.Name}
+			</div>
+			<div class="px-1.5 min-w-28 tabular-nums text-left mr-auto">
+				{f.CreatedAt > 0 ? DateTime.fromSeconds(f.CreatedAt, { zone: "utc" }).toFormat("yyyy-LL-dd HH:mm:ss") : ""}
+			</div>
+			<div class="text-right px-1.5 min-w-20">
+				{humanizeFileSize(f.Size)}
+			</div>
 		</div>
 	);
 };
 
-const parentDir: ExplorerFileData = {
-	Name: "..",
-	Type: "d",
-	Size: 0,
-	CreatedAt: 0,
-	Path: "..",
-	Selected: false,
-	ClickTimestamp: 0,
-};
+function humanizeFileSize(bytes: number): string {
+	if (bytes === 0) return "0 B";
+
+	const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(1024));
+	const size = Math.floor(bytes / Math.pow(1024, i) * 100) / 100;
+
+	return `${size.toString(10)} ${sizes[i]}`;
+}
+
