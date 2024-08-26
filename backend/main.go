@@ -17,7 +17,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -66,23 +65,6 @@ func (s *Explorer) Ls(ctx context.Context, in *contracts.LsRequest) (*contracts.
 	return out, nil
 }
 
-type GRPCHandler struct {
-	grpcWebServer *grpcweb.WrappedGrpcServer
-}
-
-func (h *GRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	} else if r.Method == http.MethodPost {
-		h.grpcWebServer.ServeHTTP(w, r)
-		return
-	} else {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte(fmt.Sprintf("%s only for grpc-web calls", r.URL.Path)))
-		return
-	}
-}
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", r.Header.Get("Origin"))
@@ -105,11 +87,8 @@ func main() {
 		middleware.Logger,
 		corsMiddleware,
 	)
-	h := &GRPCHandler{
-		grpcWebServer: grpcweb.WrapServer(s),
-	}
 	mux.Handle("/*", handler.Static())
-	mux.Handle("/grpc/*", http.StripPrefix("/grpc", h))
+	mux.Handle("/grpc/*", handler.GrpcWebHandler(s))
 	httpServer := &http.Server{
 		Addr:    ":4000",
 		Handler: mux,
