@@ -4,12 +4,16 @@ import (
 	"backend/contracts"
 	"backend/handler"
 	"context"
+	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
+	"sync"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -90,19 +94,39 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	s := grpc.NewServer()
-	grpcWebServer := grpcweb.WrapServer(s)
 	contracts.RegisterExplorerServer(s, &Explorer{})
+
 	mux := chi.NewMux()
 	mux.Use(
 		middleware.Logger,
 		corsMiddleware,
 	)
 	h := &GRPCHandler{
-		grpcWebServer: grpcWebServer,
+		grpcWebServer: grpcweb.WrapServer(s),
 	}
 	mux.Handle("/*", handler.Static())
 	mux.Handle("/grpc/*", http.StripPrefix("/grpc", h))
-	log.Fatal(http.ListenAndServe(":4000", mux))
-	return
+	httpServer := &http.Server{
+		Addr:    ":4000",
+		Handler: mux,
+	}
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil {
+			if errors.Is(err, http.ErrServerClosed) {
+				slog.Info("server stopped")
+			} else {
+				slog.Error("ListenAndServe", "err", err)
+			}
+			wg.Done()
+		}
+	}()
+	<-ctx.Done()
+	httpServer.Shutdown(context.Background())
+	wg.Wait()
 }
