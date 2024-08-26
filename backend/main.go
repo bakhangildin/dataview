@@ -34,7 +34,7 @@ func (s *Explorer) Ls(ctx context.Context, in *contracts.LsRequest) (*contracts.
 	}
 	out.Files = append(out.Files, &contracts.File{
 		Name:     "..",
-		Path:     "..",
+		Path:     filepath.Clean(path.Join(loc, "..")),
 		FileType: contracts.File_FILE_TYPE_DIR,
 		Size:     0,
 	})
