@@ -9,9 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
-	"syscall"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -58,13 +55,7 @@ func (s *Explorer) Ls(ctx context.Context, in *contracts.LsRequest) (*contracts.
 			return out, err
 		}
 		f.Size = int32(stat.Size())
-		if runtime.GOOS == "linux" {
-			if unixStat, ok := stat.Sys().(*syscall.Stat_t); ok {
-				f.CreatedAt = timestamppb.New(time.Unix(unixStat.Ctim.Unix()))
-			}
-		} else {
-			fmt.Printf("platform %s is skipped", runtime.GOOS)
-		}
+		f.CreatedAt = timestamppb.New(getCreatedAt(stat))
 		out.Files = append(out.Files, f)
 	}
 	return out, nil
