@@ -48,7 +48,7 @@ func NewFile(e fs.DirEntry, location string) (File, error) {
 	}
 	f.Size = int(stat.Size())
 	if unixStat, ok := stat.Sys().(*syscall.Stat_t); ok {
-		createdAt := time.Unix(unixStat.Ctimespec.Unix())
+		createdAt := time.Unix(unixStat.Ctim.Unix())
 		f.CreatedAt = int(createdAt.UTC().Unix())
 	} else {
 		return f, fmt.Errorf("unable to set createdAt on %s: %s\n", f.Name, reflect.TypeOf(stat.Sys()))
