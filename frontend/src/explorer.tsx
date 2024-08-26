@@ -1,5 +1,10 @@
 import { useGrpcContext } from "./GrpcContext";
-import { LsRequest, LsResponse, File, File_FileType } from "./contracts/api";
+import {
+  LsRequest,
+  LsResponse,
+  File,
+  File_FileType,
+} from "./contracts/contracts/api";
 import { DateTime } from "luxon";
 import { VsFile, VsFolder } from "solid-icons/vs";
 import { Component, For, onMount, Show } from "solid-js";
@@ -32,11 +37,19 @@ export const Explorer: Component = () => {
       loc = ".";
     }
     try {
-      let r = await explorer.ls(LsRequest.create({ location: loc }));
+      let r = await explorer.ls(
+        LsRequest.create({
+          location: loc,
+        }),
+      );
       response = r.response;
     } catch (e) {
       try {
-        let r = await explorer.ls(LsRequest.create({ location: "." }));
+        let r = await explorer.ls(
+          LsRequest.create({
+            location: ".",
+          }),
+        );
         response = r.response;
       } catch (e) {
         console.error(e);
@@ -69,7 +82,9 @@ export const Explorer: Component = () => {
           <div>File Explorer</div>
           <div
             class="loading loading-spinner loading-xs"
-            classList={{ ["hidden"]: !state.Loading }}
+            classList={{
+              ["hidden"]: !state.Loading,
+            }}
           ></div>
         </div>
       </div>
@@ -103,7 +118,11 @@ const EFileItem: Component<{
       setState("Loading", true);
       let res: LsResponse;
       try {
-        const r = await explorer.ls(LsRequest.create({ location: f.path }));
+        const r = await explorer.ls(
+          LsRequest.create({
+            location: f.path,
+          }),
+        );
         res = r.response;
       } catch (e) {
         setState("Loading", false);

@@ -1,4 +1,4 @@
-import { ExplorerClient } from "./contracts/api.client";
+import { ExplorerClient } from "./contracts/contracts/api.client";
 import { GrpcWebFetchTransport } from "@protobuf-ts/grpcweb-transport";
 import { createContext, ParentComponent, useContext } from "solid-js";
 
