@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/contracts"
+	"backend/handler"
 	"context"
 	"fmt"
 	"log"
@@ -100,7 +101,7 @@ func main() {
 	h := &GRPCHandler{
 		grpcWebServer: grpcWebServer,
 	}
-	mux.Handle("/*", http.FileServerFS(os.DirFS("./dist/")))
+	mux.Handle("/*", handler.Static())
 	mux.Handle("/grpc/*", http.StripPrefix("/grpc", h))
 	log.Fatal(http.ListenAndServe(":4000", mux))
 	return
