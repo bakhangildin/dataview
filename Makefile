@@ -10,7 +10,7 @@ proto:
 build:
 	@cd frontend && pnpm run build
 	@cp -r ./frontend/dist ./backend/handler/
-	@cd backend && go build -tags embed .
+	@cd backend && go build -o bin/dataview -tags embed .
 
 MAKEFLAGS += j -2
 dev: dev_backend dev_frontent
