@@ -5,6 +5,7 @@ import {
   File,
   File_FileType,
 } from "./contracts/contracts/api";
+import { Empty } from "./contracts/google/protobuf/empty";
 import { DateTime } from "luxon";
 import { VsFile, VsFolder } from "solid-icons/vs";
 import { Component, For, onMount, Show } from "solid-js";
@@ -19,6 +20,7 @@ type ExplorerState = {
   Loading: boolean;
   Location: string;
   Files: Array<ExplorerFileData>;
+  CurrentTime: string;
 };
 
 export const Explorer: Component = () => {
@@ -28,9 +30,21 @@ export const Explorer: Component = () => {
     Loading: true,
     Location: ".",
     Files: new Array<ExplorerFileData>(),
+    CurrentTime: "",
   });
 
   onMount(async () => {
+    const stream = explorer.timeStream(Empty.create());
+    stream.responses.onMessage((t) => {
+      setState(
+        "CurrentTime",
+        DateTime.fromSeconds(Number(t.seconds)).toFormat("yyyy-LL-dd HH:mm:ss"),
+      );
+    });
+    stream.responses.onError((e) => {
+      setState("CurrentTime", JSON.stringify(e));
+    });
+
     let response: LsResponse | null;
     let loc = localStorage.getItem("location");
     if (!loc) {
@@ -77,6 +91,7 @@ export const Explorer: Component = () => {
 
   return (
     <div class="px-4 py-2 rounded border border-base-content/30 w-fit">
+      <div>{state.CurrentTime}</div>
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-2 text-lg">
           <div>File Explorer</div>

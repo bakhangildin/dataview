@@ -14,15 +14,28 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Explorer struct {
 	contracts.UnimplementedExplorerServer
+}
+
+func (e *Explorer) TimeStream(_ *emptypb.Empty, s grpc.ServerStreamingServer[timestamppb.Timestamp]) error {
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+	for {
+		if err := s.Send(timestamppb.New(time.Now().UTC())); err != nil {
+			return err
+		}
+		<-t.C
+	}
 }
 
 func (s *Explorer) Ls(ctx context.Context, in *contracts.LsRequest) (*contracts.LsResponse, error) {

@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 option go_package = "backend/contracts";
 
@@ -23,4 +24,7 @@ message LsResponse {
   repeated File files = 2;
 }
 
-service Explorer { rpc Ls(LsRequest) returns (LsResponse); }
+service Explorer {
+  rpc Ls(LsRequest) returns (LsResponse);
+  rpc TimeStream(google.protobuf.Empty) returns (stream google.protobuf.Timestamp);
+}
