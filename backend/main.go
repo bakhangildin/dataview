@@ -119,6 +119,8 @@ func main() {
 		}
 	}()
 	<-ctx.Done()
-	httpServer.Shutdown(context.Background())
+	shutdownContext, shutdownCancel := context.WithTimeout(context.Background(), time.Millisecond*700)
+	defer shutdownCancel()
+	httpServer.Shutdown(shutdownContext)
 	wg.Wait()
 }
